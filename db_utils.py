@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 from sqlalchemy import create_engine
 import numpy as np
 import seaborn as sns
-from scipy import stats
+from scipy import stats, special
 
 
 def get_credentials(file):
@@ -81,14 +81,17 @@ class DataFrameInfo:
             if null_count != 0:
                 print(f"Column '{column_name}' has {null_count} null values ({null_percentage}% of total values)")
                 
+    def get_skews(self, df):
+        for column in df:
+            if df[column].dtype != 'object' and column != 'member_id':
+                print(f"Skew of {column} is {df[column].skew()}")
+                
     def get_z_score(self, df, column):
         col_mean = df[column].mean()
         col_std = df[column].std()
         col_z_scores = (df[column] - col_mean) / col_std
         analysis_df = df[[column]]
         analysis_df['z_scores'] = col_z_scores
-        
-        analysis_df.tail(10)
         return analysis_df
     
     def get_interquartile_range(self, df, column):
@@ -104,6 +107,7 @@ class DataFrameInfo:
         outliers = df[(df[column] < (Q1 - 1.5 * IQR)) | (df[column] > (Q3 + 1.5 * IQR))]
         print("Outliers:")
         print(outliers)
+        return outliers
 
 class DataTransform:
     None
@@ -145,19 +149,28 @@ class DataFrameTransform:
     
     @classmethod
     def log_transform(self, df, column):
-        log_output = df[column].map(lambda i: np.log(i) if i > 0 else 0)
+        log_output = df[column]
+        log_output = log_output.map(lambda i: np.log(i) if i > 0 else 0)
         return log_output
     
     @classmethod
     def box_cox_transform(self, df, column):
         boxcox_output = df[column]
-        boxcox_output = stats.boxcox(boxcox_output)
-        boxcox_output = pd.Series(boxcox_output[0])
+        # boxcox_output = boxcox_output.map(lambda i: stats.boxcox(i)[0])
+        boxcox_output = boxcox_output.map(lambda i: special.boxcox1p(i, 0.25))
         return boxcox_output
     
     @classmethod
-    def remove_outliers(self, df, column):
-        None
+    def yeo_johnson_transform(self, df, column):
+        yeo_johnson_output = df[column]
+        # yeo_johnson_output = yeo_johnson_output.map(lambda i: np.log(i) if i > 0 else 0)
+        yeo_johnson_output = yeo_johnson_output.map(lambda i: stats.yeojohnson(i))
+        return yeo_johnson_output
+    
+    @classmethod
+    def drop_outliers(self, df, column):
+        df = df[(np.abs(stats.zscore(df[column])) < 3)]
+        return df
 
 if __name__ == "__main__":
     creds = get_credentials('credentials.yaml')
