@@ -5,6 +5,7 @@ from sqlalchemy import create_engine
 import numpy as np
 import seaborn as sns
 from scipy import stats, special
+import plotly.graph_objects as go
 
 
 def get_credentials(file):
@@ -108,6 +109,9 @@ class DataFrameInfo:
         print("Outliers:")
         print(outliers)
         return outliers
+    
+    def get_vif(self, df, column):
+        return
 
 class DataTransform:
     None
@@ -119,6 +123,35 @@ class Plotter:
         f = pd.melt(df, value_vars=columns)
         g = sns.FacetGrid(f, col="variable",  col_wrap=3, sharex=False, sharey=False)
         g = g.map(sns.histplot, "value", kde=True)
+            
+    @classmethod
+    def plot_pie_category(self, df, column):
+        categories = sorted([cat for cat in df[column].unique()])
+        
+        values = []        
+        
+        for c in categories:
+            count = len(df[df[column].str.contains(c)])
+            values.append(count)
+        
+        category_pie = go.Pie(values=values, 
+                              labels=categories)
+        return category_pie        
+    
+    # @classmethod
+    # def plot_pie_category(self, df, column, title):
+    #     categories = sorted([cat for cat in df[column].unique()])
+        
+    #     values = []        
+        
+    #     for c in categories:
+    #         count = len(df[df[column].str.contains(c)])
+    #         values.append(count)
+        
+    #     category_pie = px.pie(values=values, 
+    #                           names=categories, 
+    #                           title=title)
+    #     return category_pie
     
 class DataFrameTransform:
     @classmethod
