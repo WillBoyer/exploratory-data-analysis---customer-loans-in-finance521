@@ -1,11 +1,10 @@
-import pandas as pd
-import yaml
-from matplotlib import pyplot as plt
-from sqlalchemy import create_engine
 import numpy as np
-import seaborn as sns
-from scipy import stats, special
+import pandas as pd
 import plotly.graph_objects as go
+from scipy import stats, special
+import seaborn as sns
+from sqlalchemy import create_engine
+import yaml
 
 
 def get_credentials(filename):
@@ -170,7 +169,7 @@ class DataFrameInfo:
             df (pandas.Dataframe): The SQL database table, as converted to a Pandas Dataframe.
         '''
         for column in df:
-            if df[column].dtype != 'object' and column != 'member_id':
+            if (df[column].dtype == 'float64' or df[column].dtype == 'int64') and column != 'member_id':
                 print(f"Skew of {column} is {df[column].skew()}")
                 
     def get_z_score(self, df, column):
@@ -224,12 +223,19 @@ class DataFrameInfo:
         # Identify outliers
         outliers = df[(df[column] < (Q1 - 1.5 * IQR)) | (df[column] > (Q3 + 1.5 * IQR))]
         return outliers
-    
-    def get_vif(self, df, column):
-        return
 
 class DataTransform:
-    None
+    '''
+    Contains methods for converting dataframe columns to the correct format.
+    '''
+    @classmethod
+    def convert_date(self, df, column):
+        '''
+        Converts columns in format of 'MMM-YYYY' to Pandas DateTime format,
+        to aid calculations later on in the EDA process.
+        '''
+        converted_column = pd.to_datetime(df[column].astype(str), format='%b-%Y', errors='coerce')
+        return converted_column
 
 class Plotter:
     '''
@@ -360,8 +366,9 @@ class DataFrameTransform:
     @classmethod
     def box_cox_transform(self, df, column):
         '''
-        Performs a Log transform to correct skew in the given column of the
-        dataframe.
+        Performs a Box-Cox transform to correct skew in the given column of the
+        dataframe. Adds a small constant (0.25) to the data, to allow for
+        transformation of columns that contain '0' values.
 
         Args:
             df (pandas.Dataframe): The SQL database table, as converted to a Pandas Dataframe.
